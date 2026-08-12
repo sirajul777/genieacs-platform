@@ -1,0 +1,20 @@
+# Binaries
+/bin/
+/dist/
+/manager
+/agent
+
+# Go build/test artifacts
+*.test
+*.out
+coverage.out
+
+# Local environment
+.env
+*.local
+
+# IDE/editor
+.vscode/
+.idea/
+*.swp
+.DS_Store

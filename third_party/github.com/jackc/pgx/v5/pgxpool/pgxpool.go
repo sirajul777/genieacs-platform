@@ -27,6 +27,7 @@ func (p *Pool) Query(ctx context.Context, sql string, args ...any) (Rows, error)
 func (p *Pool) Exec(ctx context.Context, sql string, args ...any) (CommandTag, error) {
 	return CommandTag{}, nil
 }
+func (p *Pool) Begin(ctx context.Context) (Tx, error) { return Tx{}, nil }
 
 type Row struct{}
 
@@ -40,3 +41,9 @@ func (r Rows) Close()                 {}
 func (r Rows) Next() bool             { return false }
 func (r Rows) Scan(dest ...any) error { return errors.New("pgxpool stub row has no data") }
 func (r Rows) Err() error             { return nil }
+
+type Tx struct{}
+
+func (t Tx) QueryRow(ctx context.Context, sql string, args ...any) Row { return Row{} }
+func (t Tx) Commit(ctx context.Context) error                          { return nil }
+func (t Tx) Rollback(ctx context.Context) error                        { return nil }

@@ -8,6 +8,14 @@ type Agent struct {
 	Name      string
 	Endpoint  string
 	Status    string
+	TokenHash []byte
 	CreatedAt time.Time
 	UpdatedAt time.Time
+	LastSeen  *time.Time
+}
+
+type Heartbeat struct {
+	ID        int64
+	AgentID   string
+	CreatedAt time.Time
 }

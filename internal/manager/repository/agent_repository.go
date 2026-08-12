@@ -10,4 +10,5 @@ type AgentRepository interface {
 	Create(ctx context.Context, item agent.Agent) (agent.Agent, error)
 	GetByID(ctx context.Context, id string) (agent.Agent, error)
 	List(ctx context.Context) ([]agent.Agent, error)
+	UpdateLastSeen(ctx context.Context, id string) (agent.Agent, error)
 }

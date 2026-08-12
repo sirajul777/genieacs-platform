@@ -10,6 +10,10 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/sirajul777/genieacs-platform/internal/manager/config"
 	"github.com/sirajul777/genieacs-platform/internal/manager/health"
+	managerhttp "github.com/sirajul777/genieacs-platform/internal/manager/http"
+	"github.com/sirajul777/genieacs-platform/internal/manager/repository/postgres"
+	agentusecase "github.com/sirajul777/genieacs-platform/internal/manager/usecase/agent"
+	jobusecase "github.com/sirajul777/genieacs-platform/internal/manager/usecase/job"
 	"go.uber.org/zap"
 )
 
@@ -21,6 +25,15 @@ type Server struct {
 func New(cfg config.ServerConfig, logger *zap.Logger, database *pgxpool.Pool) *Server {
 	router := chi.NewRouter()
 	router.Get("/health", health.NewHandler(database).ServeHTTP)
+	agentHandler := managerhttp.NewAgentHandler(agentusecase.NewUseCase(postgres.NewAgentRepository(database), postgres.NewHeartbeatRepository(database)))
+	jobHandler := managerhttp.NewJobHandler(jobusecase.NewService(postgres.NewJobRepository(database), postgres.NewJobEventRepository(database)))
+	router.Post("/api/v1/agents/register", agentHandler.Register)
+	router.Post("/api/v1/agents/heartbeat", agentHandler.Heartbeat)
+	router.Post("/api/v1/jobs", jobHandler.Create)
+	router.Post("/api/v1/jobs/poll", jobHandler.Poll)
+	router.Post("/api/v1/jobs/{id}/progress", jobHandler.Progress)
+	router.Post("/api/v1/jobs/{id}/complete", jobHandler.Complete)
+	router.Post("/api/v1/jobs/{id}/fail", jobHandler.Fail)
 	return &Server{
 		httpServer: &http.Server{Addr: cfg.Address, Handler: router, ReadHeaderTimeout: 5 * time.Second},
 		logger:     logger,

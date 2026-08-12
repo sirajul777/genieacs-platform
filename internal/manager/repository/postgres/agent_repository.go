@@ -15,7 +15,7 @@ func NewAgentRepository(pool *pgxpool.Pool) *AgentRepository {
 }
 
 func (r *AgentRepository) Create(ctx context.Context, item domain.Agent) (domain.Agent, error) {
-	created, err := r.queries.CreateAgent(ctx, sqlc.CreateAgentParams{ID: item.ID, Name: item.Name, Endpoint: item.Endpoint, Status: string(item.Status)})
+	created, err := r.queries.CreateAgent(ctx, sqlc.CreateAgentParams{ID: item.ID, Name: item.Name, Endpoint: item.Endpoint, Status: string(item.Status), TokenHash: item.TokenHash})
 	if err != nil {
 		return domain.Agent{}, err
 	}
@@ -42,6 +42,14 @@ func (r *AgentRepository) List(ctx context.Context) ([]domain.Agent, error) {
 	return result, nil
 }
 
+func (r *AgentRepository) UpdateLastSeen(ctx context.Context, id string) (domain.Agent, error) {
+	item, err := r.queries.UpdateAgentLastSeen(ctx, id)
+	if err != nil {
+		return domain.Agent{}, err
+	}
+	return toDomain(item), nil
+}
+
 func toDomain(item sqlc.Agent) domain.Agent {
-	return domain.Agent{ID: item.ID, Name: item.Name, Endpoint: item.Endpoint, Status: domain.Status(item.Status), CreatedAt: item.CreatedAt, UpdatedAt: item.UpdatedAt}
+	return domain.Agent{ID: item.ID, Name: item.Name, Endpoint: item.Endpoint, Status: domain.Status(item.Status), TokenHash: item.TokenHash, CreatedAt: item.CreatedAt, UpdatedAt: item.UpdatedAt, LastSeen: item.LastSeen}
 }

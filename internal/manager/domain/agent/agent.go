@@ -7,8 +7,10 @@ type Agent struct {
 	Name      string
 	Endpoint  string
 	Status    Status
+	TokenHash []byte
 	CreatedAt time.Time
 	UpdatedAt time.Time
+	LastSeen  *time.Time
 }
 
 type Status string

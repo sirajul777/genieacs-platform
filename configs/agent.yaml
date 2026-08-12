@@ -1,5 +1,13 @@
 server:
   address: :8081
+
+manager:
+  endpoint: http://localhost:8080
+  name: agent-1
+  state_file: agent-state.json
+  poll_interval: 2s
+  heartbeat_interval: 15s
+
 logger:
   environment: development
   level: info

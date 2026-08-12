@@ -1,24 +1,14 @@
 package manager
 
-import (
-	"bytes"
-	"context"
-	"encoding/json"
-	"errors"
-	"fmt"
-	"io"
-	"net/http"
-	"strings"
-	"time"
-)
-
-var ErrNoJob = errors.New("no job available")
-type Client struct { baseURL string; token string; http *http.Client }
-type Job struct { ID string `json:"id"`; Type string `json:"type"`; Payload json.RawMessage `json:"payload"`; Status string `json:"status"` }
-type Registration struct { AgentID string `json:"id"`; Token string `json:"token"` }
-type jobResponse struct { ID string `json:"id"`; Type string `json:"type"`; Payload json.RawMessage `json:"payload"`; Status string `json:"status"` }
-func NewClient(baseURL, token string, httpClient *http.Client)*Client{if httpClient==nil{httpClient=&http.Client{Timeout:30*time.Second}};return &Client{baseURL:strings.TrimRight(baseURL,"/"),token:token,http:httpClient}}
-func(c *Client)Register(ctx context.Context,name,endpoint string)(Registration,error){var out Registration;err:=c.post(ctx,"/api/v1/agents/register",map[string]string{"name":name,"endpoint":endpoint},&out);return out,err}
+import("bytes";"context";"encoding/json";"errors";"fmt";"io";"net/http";"strings";"time")
+var ErrNoJob=errors.New("no job available")
+type Client struct{baseURL string;token string;http *http.Client}
+type Job struct{ID string `json:"id"`;Type string `json:"type"`;Payload json.RawMessage `json:"payload"`;Status string `json:"status"`}
+type Registration struct{AgentID string;Token string}
+type registrationResponse struct{Agent struct{ID string `json:"id"`} `json:"agent"`;Token string `json:"token"`}
+type jobResponse struct{ID string `json:"id"`;Type string `json:"type"`;Payload json.RawMessage `json:"payload"`;Status string `json:"status"`}
+func NewClient(baseURL,token string,httpClient *http.Client)*Client{if httpClient==nil{httpClient=&http.Client{Timeout:30*time.Second}};return &Client{baseURL:strings.TrimRight(baseURL,"/"),token:token,http:httpClient}}
+func(c *Client)Register(ctx context.Context,name,endpoint string)(Registration,error){var out registrationResponse;err:=c.post(ctx,"/api/v1/agents/register",map[string]string{"name":name,"endpoint":endpoint},&out);return Registration{AgentID:out.Agent.ID,Token:out.Token},err}
 func(c *Client)Heartbeat(ctx context.Context,agentID string)error{return c.post(ctx,"/api/v1/agents/heartbeat",map[string]string{"agent_id":agentID},nil)}
 func(c *Client)Poll(ctx context.Context,agentID string)(Job,error){var out jobResponse;err:=c.post(ctx,"/api/v1/jobs/poll",map[string]string{"agent_id":agentID},&out);if err!=nil{return Job{},err};return Job{ID:out.ID,Type:out.Type,Payload:out.Payload,Status:out.Status},nil}
 func(c *Client)Progress(ctx context.Context,jobID string,progress int,message string)error{return c.post(ctx,"/api/v1/jobs/"+jobID+"/progress",map[string]any{"progress":progress,"message":message},nil)}

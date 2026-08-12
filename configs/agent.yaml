@@ -1,0 +1,5 @@
+server:
+  address: :8081
+logger:
+  environment: development
+  level: info

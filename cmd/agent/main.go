@@ -1,23 +1,6 @@
 package main
 
-import(
-	"context"
-	"errors"
-	"os"
-	"os/signal"
-	"syscall"
-	"time"
-	agentconfig "github.com/sirajul777/genieacs-platform/internal/agent/config"
-	"github.com/sirajul777/genieacs-platform/internal/agent/identity"
-	"github.com/sirajul777/genieacs-platform/internal/agent/manager"
-	agentruntime "github.com/sirajul777/genieacs-platform/internal/agent/runtime"
-	"github.com/sirajul777/genieacs-platform/internal/agent/server"
-	"github.com/sirajul777/genieacs-platform/internal/agent/worker"
-	"github.com/sirajul777/genieacs-platform/internal/shared/logger"
-	"github.com/sirajul777/genieacs-platform/internal/shared/version"
-	"github.com/spf13/cobra"
-	"go.uber.org/zap"
-)
+import("context";"errors";"os";"os/signal";"syscall";"time";agentconfig "github.com/sirajul777/genieacs-platform/internal/agent/config";"github.com/sirajul777/genieacs-platform/internal/agent/identity";"github.com/sirajul777/genieacs-platform/internal/agent/manager";agentruntime "github.com/sirajul777/genieacs-platform/internal/agent/runtime";"github.com/sirajul777/genieacs-platform/internal/agent/server";"github.com/sirajul777/genieacs-platform/internal/agent/worker";"github.com/sirajul777/genieacs-platform/internal/shared/logger";"github.com/sirajul777/genieacs-platform/internal/shared/version";"github.com/spf13/cobra";"go.uber.org/zap")
 func main(){if err:=newRootCommand().Execute();err!=nil{os.Exit(1)}}
-func newRootCommand()*cobra.Command{var configFile string;cmd:=&cobra.Command{Use:"agent",Short:"Run the GenieACS platform agent service",Version:version.Version,RunE:func(cmd *cobra.Command,args []string)error{cfg,err:=agentconfig.Load(configFile);if err!=nil{return err};log,err:=logger.New(cfg.Logger);if err!=nil{return err};defer func(){_=log.Sync()}();ctx,stop:=signal.NotifyContext(context.Background(),os.Interrupt,syscall.SIGTERM);defer stop();client:=manager.NewClient(cfg.Manager.Endpoint,cfg.Manager.Token,nil);creds:=identity.Credentials{AgentID:cfg.Manager.AgentID,Token:cfg.Manager.Token};if creds.AgentID==""||creds.Token==""{name:=cfg.Manager.Name;if name==""{name,_=os.Hostname()};registered,registerErr:=client.Register(ctx,name,cfg.Server.Address);if registerErr!=nil{return registerErr};creds=identity.Credentials{AgentID:registered.AgentID,Token:registered.Token};if err:=identity.Save(cfg.Manager.StateFile,creds);err!=nil{return err};client=manager.NewClient(cfg.Manager.Endpoint,creds.Token,nil)}else{if saved,loadErr:=identity.Load(cfg.Manager.StateFile);loadErr==nil&&saved.AgentID==creds.AgentID&&saved.Token==creds.Token{creds=saved}};registry:=worker.NewRegistry();runner:=agentruntime.NewRunner(client,worker.NewRuntime(registry),creds.AgentID,cfg.Manager.PollInterval);go func(){if err:=runner.Run(ctx);err!=nil&&ctx.Err()==nil{log.Error("agent job runner stopped",zap.Error(err))}}();go heartbeatLoop(ctx,client,creds.AgentID,cfg.Manager.HeartbeatInterval,log);if err:=server.New(cfg.Server,log).Start(ctx);err!=nil{log.Error("agent server stopped",zap.Error(err));return err};return nil}};cmd.Flags().StringVarP(&configFile,"config","c","","path to config file");return cmd}
+func newRootCommand()*cobra.Command{var configFile string;cmd:=&cobra.Command{Use:"agent",Short:"Run the GenieACS platform agent service",Version:version.Version,RunE:func(cmd *cobra.Command,args []string)error{cfg,err:=agentconfig.Load(configFile);if err!=nil{return err};log,err:=logger.New(cfg.Logger);if err!=nil{return err};defer func(){_=log.Sync()}();ctx,stop:=signal.NotifyContext(context.Background(),os.Interrupt,syscall.SIGTERM);defer stop();creds,loadErr:=identity.Load(cfg.Manager.StateFile);if loadErr!=nil{creds=identity.Credentials{AgentID:cfg.Manager.AgentID,Token:cfg.Manager.Token}};client:=manager.NewClient(cfg.Manager.Endpoint,creds.Token,nil);if creds.AgentID==""||creds.Token==""{name:=cfg.Manager.Name;if name==""{name,_=os.Hostname()};registered,registerErr:=client.Register(ctx,name,cfg.Server.Address);if registerErr!=nil{return registerErr};creds=identity.Credentials{AgentID:registered.AgentID,Token:registered.Token};if err:=identity.Save(cfg.Manager.StateFile,creds);err!=nil{return err};client=manager.NewClient(cfg.Manager.Endpoint,creds.Token,nil)};registry:=worker.NewRegistry();runner:=agentruntime.NewRunner(client,worker.NewRuntime(registry),creds.AgentID,cfg.Manager.PollInterval);go func(){if err:=runner.Run(ctx);err!=nil&&ctx.Err()==nil{log.Error("agent job runner stopped",zap.Error(err))}}();go heartbeatLoop(ctx,client,creds.AgentID,cfg.Manager.HeartbeatInterval,log);if err:=server.New(cfg.Server,log).Start(ctx);err!=nil{log.Error("agent server stopped",zap.Error(err));return err};return nil}};cmd.Flags().StringVarP(&configFile,"config","c","","path to config file");return cmd}
 func heartbeatLoop(ctx context.Context,client *manager.Client,agentID string,interval time.Duration,log *zap.Logger){if interval<=0{interval=15*time.Second};ticker:=time.NewTicker(interval);defer ticker.Stop();for{if err:=client.Heartbeat(ctx,agentID);err!=nil&&!errors.Is(err,context.Canceled){log.Warn("agent heartbeat failed",zap.Error(err))};select{case<-ctx.Done():return;case<-ticker.C:}}}

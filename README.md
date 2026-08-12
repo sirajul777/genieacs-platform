@@ -92,4 +92,27 @@ Regenerate query code:
 make sqlc
 ```
 
-The initial migration creates an `agents` table used by the repository foundation. Agent registration is intentionally not implemented yet.
+The initial migrations create the `agents` and `heartbeats` tables used by registration and heartbeat persistence.
+
+## Manager Agent API
+
+Agent registration and heartbeat endpoints are available under `/api/v1/agents`.
+
+Register an agent:
+
+```bash
+curl -X POST http://localhost:8080/api/v1/agents/register \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"agent-1","endpoint":"http://agent:8081"}'
+```
+
+The registration response includes a bearer token once. The manager stores only a SHA-256 hash of the 32-byte random token.
+
+Send a heartbeat:
+
+```bash
+curl -X POST http://localhost:8080/api/v1/agents/heartbeat \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer <token>' \
+  -d '{"agent_id":"<agent-id>"}'
+```

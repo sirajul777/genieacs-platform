@@ -12,28 +12,29 @@ type Queries struct{ db *pgxpool.Pool }
 func New(db *pgxpool.Pool) *Queries { return &Queries{db: db} }
 
 type CreateAgentParams struct {
-	ID       string
-	Name     string
-	Endpoint string
-	Status   string
+	ID        string
+	Name      string
+	Endpoint  string
+	Status    string
+	TokenHash []byte
 }
 
 func (q *Queries) CreateAgent(ctx context.Context, arg CreateAgentParams) (Agent, error) {
-	row := q.db.QueryRow(ctx, `INSERT INTO agents (id, name, endpoint, status) VALUES ($1, $2, $3, $4) RETURNING id, name, endpoint, status, created_at, updated_at`, arg.ID, arg.Name, arg.Endpoint, arg.Status)
+	row := q.db.QueryRow(ctx, `INSERT INTO agents (id, name, endpoint, status, token_hash) VALUES ($1, $2, $3, $4, $5) RETURNING id, name, endpoint, status, token_hash, created_at, updated_at, last_seen`, arg.ID, arg.Name, arg.Endpoint, arg.Status, arg.TokenHash)
 	var item Agent
-	err := row.Scan(&item.ID, &item.Name, &item.Endpoint, &item.Status, &item.CreatedAt, &item.UpdatedAt)
+	err := row.Scan(&item.ID, &item.Name, &item.Endpoint, &item.Status, &item.TokenHash, &item.CreatedAt, &item.UpdatedAt, &item.LastSeen)
 	return item, err
 }
 
 func (q *Queries) GetAgentByID(ctx context.Context, id string) (Agent, error) {
-	row := q.db.QueryRow(ctx, `SELECT id, name, endpoint, status, created_at, updated_at FROM agents WHERE id = $1`, id)
+	row := q.db.QueryRow(ctx, `SELECT id, name, endpoint, status, token_hash, created_at, updated_at, last_seen FROM agents WHERE id = $1`, id)
 	var item Agent
-	err := row.Scan(&item.ID, &item.Name, &item.Endpoint, &item.Status, &item.CreatedAt, &item.UpdatedAt)
+	err := row.Scan(&item.ID, &item.Name, &item.Endpoint, &item.Status, &item.TokenHash, &item.CreatedAt, &item.UpdatedAt, &item.LastSeen)
 	return item, err
 }
 
 func (q *Queries) ListAgents(ctx context.Context) ([]Agent, error) {
-	rows, err := q.db.Query(ctx, `SELECT id, name, endpoint, status, created_at, updated_at FROM agents ORDER BY created_at DESC`)
+	rows, err := q.db.Query(ctx, `SELECT id, name, endpoint, status, token_hash, created_at, updated_at, last_seen FROM agents ORDER BY created_at DESC`)
 	if err != nil {
 		return nil, err
 	}
@@ -41,10 +42,17 @@ func (q *Queries) ListAgents(ctx context.Context) ([]Agent, error) {
 	items := []Agent{}
 	for rows.Next() {
 		var item Agent
-		if err := rows.Scan(&item.ID, &item.Name, &item.Endpoint, &item.Status, &item.CreatedAt, &item.UpdatedAt); err != nil {
+		if err := rows.Scan(&item.ID, &item.Name, &item.Endpoint, &item.Status, &item.TokenHash, &item.CreatedAt, &item.UpdatedAt, &item.LastSeen); err != nil {
 			return nil, err
 		}
 		items = append(items, item)
 	}
 	return items, rows.Err()
+}
+
+func (q *Queries) UpdateAgentLastSeen(ctx context.Context, id string) (Agent, error) {
+	row := q.db.QueryRow(ctx, `UPDATE agents SET last_seen = NOW(), updated_at = NOW() WHERE id = $1 RETURNING id, name, endpoint, status, token_hash, created_at, updated_at, last_seen`, id)
+	var item Agent
+	err := row.Scan(&item.ID, &item.Name, &item.Endpoint, &item.Status, &item.TokenHash, &item.CreatedAt, &item.UpdatedAt, &item.LastSeen)
+	return item, err
 }

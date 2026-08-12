@@ -10,6 +10,9 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/sirajul777/genieacs-platform/internal/manager/config"
 	"github.com/sirajul777/genieacs-platform/internal/manager/health"
+	managerhttp "github.com/sirajul777/genieacs-platform/internal/manager/http"
+	"github.com/sirajul777/genieacs-platform/internal/manager/repository/postgres"
+	agentusecase "github.com/sirajul777/genieacs-platform/internal/manager/usecase/agent"
 	"go.uber.org/zap"
 )
 
@@ -21,6 +24,9 @@ type Server struct {
 func New(cfg config.ServerConfig, logger *zap.Logger, database *pgxpool.Pool) *Server {
 	router := chi.NewRouter()
 	router.Get("/health", health.NewHandler(database).ServeHTTP)
+	agentHandler := managerhttp.NewAgentHandler(agentusecase.NewUseCase(postgres.NewAgentRepository(database), postgres.NewHeartbeatRepository(database)))
+	router.Post("/api/v1/agents/register", agentHandler.Register)
+	router.Post("/api/v1/agents/heartbeat", agentHandler.Heartbeat)
 	return &Server{
 		httpServer: &http.Server{Addr: cfg.Address, Handler: router, ReadHeaderTimeout: 5 * time.Second},
 		logger:     logger,

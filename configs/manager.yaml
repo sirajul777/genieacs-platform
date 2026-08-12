@@ -3,3 +3,10 @@ server:
 logger:
   environment: development
   level: info
+database:
+  host: localhost
+  port: 5432
+  database: genieacs_platform
+  user: genieacs
+  password: genieacs
+  ssl_mode: disable

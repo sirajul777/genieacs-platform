@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"os"
 	"reflect"
+	"strconv"
 	"strings"
 )
 
@@ -73,9 +74,15 @@ func fillStruct(rv reflect.Value, prefix string, v *Viper) {
 			fillStruct(fv, key, v)
 			continue
 		}
-		if fv.Kind() == reflect.String {
+		switch fv.Kind() {
+		case reflect.String:
 			if val, ok := lookup(v, key); ok {
 				fv.SetString(val)
+			}
+		case reflect.Int:
+			if val, ok := lookup(v, key); ok {
+				parsed, _ := strconv.Atoi(val)
+				fv.SetInt(int64(parsed))
 			}
 		}
 	}
@@ -92,8 +99,11 @@ func lookup(v *Viper, key string) (string, bool) {
 		return val, true
 	}
 	if val, ok := v.values[key]; ok {
-		if s, ok := val.(string); ok {
-			return s, true
+		switch typed := val.(type) {
+		case string:
+			return typed, true
+		case int:
+			return strconv.Itoa(typed), true
 		}
 	}
 	return "", false

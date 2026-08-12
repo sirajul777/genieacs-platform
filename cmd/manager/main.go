@@ -8,6 +8,7 @@ import (
 
 	managerconfig "github.com/sirajul777/genieacs-platform/internal/manager/config"
 	"github.com/sirajul777/genieacs-platform/internal/manager/server"
+	"github.com/sirajul777/genieacs-platform/internal/shared/database"
 	"github.com/sirajul777/genieacs-platform/internal/shared/logger"
 	"github.com/sirajul777/genieacs-platform/internal/shared/version"
 	"github.com/spf13/cobra"
@@ -39,7 +40,14 @@ func newRootCommand() *cobra.Command {
 
 			ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 			defer stop()
-			if err := server.New(cfg.Server, log).Start(ctx); err != nil {
+
+			db, err := database.Connect(ctx, cfg.Database)
+			if err != nil {
+				return err
+			}
+			defer db.Close()
+
+			if err := server.New(cfg.Server, log, db).Start(ctx); err != nil {
 				log.Error("manager server stopped", zap.Error(err))
 				return err
 			}

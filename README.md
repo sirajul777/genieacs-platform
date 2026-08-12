@@ -69,3 +69,27 @@ Examples:
 MANAGER_SERVER_ADDRESS=:9000 go run ./cmd/manager
 AGENT_SERVER_ADDRESS=:9001 go run ./cmd/agent
 ```
+
+## Database
+
+The manager service uses PostgreSQL through pgx. Schema changes are managed with golang-migrate and type-safe query code is generated from SQL definitions with sqlc.
+
+Start PostgreSQL locally:
+
+```bash
+docker compose up -d postgres
+```
+
+Run migrations:
+
+```bash
+make migrate-up
+```
+
+Regenerate query code:
+
+```bash
+make sqlc
+```
+
+The initial migration creates an `agents` table used by the repository foundation. Agent registration is intentionally not implemented yet.

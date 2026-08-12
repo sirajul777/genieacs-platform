@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/sirajul777/genieacs-platform/internal/manager/config"
 	"github.com/sirajul777/genieacs-platform/internal/manager/health"
 	"go.uber.org/zap"
@@ -17,9 +18,9 @@ type Server struct {
 	logger     *zap.Logger
 }
 
-func New(cfg config.ServerConfig, logger *zap.Logger) *Server {
+func New(cfg config.ServerConfig, logger *zap.Logger, database *pgxpool.Pool) *Server {
 	router := chi.NewRouter()
-	router.Get("/health", health.NewHandler().ServeHTTP)
+	router.Get("/health", health.NewHandler(database).ServeHTTP)
 	return &Server{
 		httpServer: &http.Server{Addr: cfg.Address, Handler: router, ReadHeaderTimeout: 5 * time.Second},
 		logger:     logger,

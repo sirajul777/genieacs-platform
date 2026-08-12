@@ -7,7 +7,10 @@ import (
 	"syscall"
 
 	agentconfig "github.com/sirajul777/genieacs-platform/internal/agent/config"
+	"github.com/sirajul777/genieacs-platform/internal/agent/manager"
+	"github.com/sirajul777/genieacs-platform/internal/agent/runtime"
 	"github.com/sirajul777/genieacs-platform/internal/agent/server"
+	"github.com/sirajul777/genieacs-platform/internal/agent/worker"
 	"github.com/sirajul777/genieacs-platform/internal/shared/logger"
 	"github.com/sirajul777/genieacs-platform/internal/shared/version"
 	"github.com/spf13/cobra"
@@ -39,6 +42,20 @@ func newRootCommand() *cobra.Command {
 
 			ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 			defer stop()
+
+			registry := worker.NewRegistry()
+			runner := runtime.NewRunner(
+				manager.NewClient(cfg.Manager.Endpoint, cfg.Manager.Token, nil),
+				worker.NewRuntime(registry),
+				cfg.Manager.AgentID,
+				cfg.Manager.PollInterval,
+			)
+			go func() {
+				if err := runner.Run(ctx); err != nil && ctx.Err() == nil {
+					log.Error("agent job runner stopped", zap.Error(err))
+				}
+			}()
+
 			if err := server.New(cfg.Server, log).Start(ctx); err != nil {
 				log.Error("agent server stopped", zap.Error(err))
 				return err

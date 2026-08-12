@@ -61,10 +61,12 @@ func TestRuntimeRejectsUnknownWorker(t *testing.T) {
 
 func TestRuntimePropagatesCancellation(t *testing.T) {
 	r := NewRegistry()
+	started := make(chan struct{})
 	cancelled := make(chan struct{})
 	if err := r.Register(testWorker{
 		typeName: "cancel.example",
 		fn: func(ctx context.Context) (Result, error) {
+			close(started)
 			<-ctx.Done()
 			close(cancelled)
 			return Result{}, ctx.Err()
@@ -74,16 +76,19 @@ func TestRuntimePropagatesCancellation(t *testing.T) {
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
+	result := make(chan error, 1)
+	go func() {
+		_, err := NewRuntime(r).Execute(ctx, Job{ID: "job-1", Type: "cancel.example"}, testProgress{})
+		result <- err
+	}()
+
+	<-started
 	cancel()
-	_, err := NewRuntime(r).Execute(ctx, Job{ID: "job-1", Type: "cancel.example"}, testProgress{})
-	if !errors.Is(err, context.Canceled) {
+
+	if err := <-result; !errors.Is(err, context.Canceled) {
 		t.Fatalf("expected context cancellation, got %v", err)
 	}
-	select {
-	case <-cancelled:
-		t.Fatalf("worker should not start after cancellation")
-	default:
-	}
+	<-cancelled
 }
 
 func TestRuntimeRejectsNilProgressReporter(t *testing.T) {

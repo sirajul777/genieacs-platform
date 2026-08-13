@@ -2,9 +2,12 @@ package repository
 
 import (
 	"context"
+	"errors"
 
 	"github.com/sirajul777/genieacs-platform/internal/manager/domain/job"
 )
+
+var ErrNoPendingJob = errors.New("no pending job")
 
 type JobRepository interface {
 	Create(ctx context.Context, item job.Job) (job.Job, error)
